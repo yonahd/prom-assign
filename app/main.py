@@ -3,9 +3,10 @@ import prometheus_client as prom
 import time
 from flask import Flask
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
+import logging
 
 
-URL_LIST = ["https://httpstat.us/503", "https://httpstat.us/200"]
+URL_LIST = ["https://abc-fake.com", "https://httpstat.us/503", "https://httpstat.us/200"]
 URL_STATUS_GAUGE = prom.Gauge('sample_external_url_up', 'This is my gauge', ["url"])
 RESPONSE_TIME_GAUGE = prom.Gauge('sample_external_url_response_ms', 'This is my gauge', ["url"])
 
@@ -30,9 +31,12 @@ def get_response(url: str) -> dict:
 def get_url_status():
     while True:
         for url_name in URL_LIST:
-            response = get_response(url_name)
-            RESPONSE_TIME_GAUGE.labels(url=url_name).set(response['response_time'])
-            URL_STATUS_GAUGE.labels(url=url_name).set(response['status'])
+            try:
+                response = get_response(url_name)
+                RESPONSE_TIME_GAUGE.labels(url=url_name).set(response['response_time'])
+                URL_STATUS_GAUGE.labels(url=url_name).set(response['status'])
+            except requests.exceptions.RequestException as err:
+                logging.error(err)
         time.sleep(5)
 
 
